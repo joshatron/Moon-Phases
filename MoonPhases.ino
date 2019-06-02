@@ -63,7 +63,8 @@ void loop() {
     applyState(state);
   }
 
-  if(digitalRead(buttonPin) == LOW) {
+  //Assumes the button is pull down
+  if(digitalRead(buttonPin) == HIGH) {
     //Increase by 1, but loop back down to 0 if more than a full period
     offset = (offset + 1) % 30;
     //Do the delay because otherwise it will cycle the offset really quickly
