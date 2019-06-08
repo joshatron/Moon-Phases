@@ -1,11 +1,14 @@
-//Time for the moon period: 29 days, 12 hours, 44 minutes, 3 seconds
-unsigned long moonPeriod = 2551443000;
-//Time in a day
-unsigned long offsetAmount = 86400000;
-//Number of days to offset
+//Time for the full moon period: 29 days, 12 hours, 44 minutes, 3 seconds
+//Lengths of a period
+unsigned long periods[6] = {12000, 720000, 3600000, 86400000, 604800000, 2551443000};
+//Length of an offset
+unsigned long offsets[6] = {1000, 60000, 300000, 7200000, 50400000, 86400000};
+//Number of offsets
 int offset = 0;
+//Which speed to do
+int currentPeriod = 5;
 
-unsigned long time = 0;
+unsigned long currentTime = 0;
 
 //Pins for lights from left to right
 int statePins[6] = {9,3,10,5,6,11};
@@ -25,9 +28,10 @@ int transitionBrightnesses[6][12] = {
  {255,0,0,0,0,0,0,255,255,255,255,255}
 };
 
-enum ButtonState {MODE, OFFSET, BRIGHTNESS};
-ButtonState currentState = MODE;
+enum ButtonState {NORMAL, MODE, BRIGHTNESS, PERIOD, OFFSET};
+ButtonState currentState = NORMAL;
 int stateIndicator = 0;
+unsigned long stateTimer = 0;
 
 void setup() {
   for(int i = 0; i < 6; i++) {
@@ -49,56 +53,191 @@ void applyMoonState(double percentThrough) {
   }
 }
 
-void runModeState() {
+void runNormalState() {
   if(digitalRead(buttonPin) == HIGH) {
-    stateIndicator = (stateIndicator + 1) % 3;
+    currentState = MODE;
+    stateIndicator = 0;
+    stateTimer = millis();
+    return;
   }
-  else {
+  
+  //Using millis() - currentTime makes it work even with the overflow that millis makes
+  if(millis() - currentTime > periods[currentPeriod]) {
+    currentTime = millis();
+  }
+
+  //(Time elapsed in period + adding halfway through the state + the offset based on button input) / the period of the state
+  //The halfway through state is so the starting point is right at the full moon to make a good reference point
+  double current = ((millis() - currentTime) + (periods[currentPeriod] / 24.) + (offsets[currentPeriod] * offset)) / periods[currentPeriod];
+  while(current > 1) {
+    current--;
+  }
+
+  applyMoonState(current);
+}
+
+void runModeState() {
+  if(millis() - stateTimer > 2000) {
     switch(stateIndicator) {
+      case 0:
+        currentState = NORMAL;
+        return;
       case 1:
         currentState = BRIGHTNESS;
-        stateIndicator = 0;
+        stateTimer = millis();
         return;
       case 2:
+        currentState = SPEED;
+        stateTimer = millis();
+        return;
+      case 3:
         currentState = OFFSET;
-        stateIndicator = 0;
+        stateTimer = millis();
         return;
     }
   }
   
-  if(stateIndicator == 0) {
-    //Using millis() - time makes it work even with the overflow that millis makes
-    if(millis() - time > moonPeriod) {
-      time = millis();
-    }
+  if(digitalRead(buttonPin) == HIGH) {
+    stateTimer = millis();
+    stateIndicator = (stateIndicator + 1) % 4;
 
-    //(Time elapsed in period + adding halfway through the state + the offset based on button input) / the period of the state
-    //The halfway through state is so the starting point is right at the full moon to make a good reference point
-    double current = ((millis() - time) + (moonPeriod / 24.) + (offsetAmount * offset)) / moonPeriod;
-    while(current > 1) {
-      current--;
-    }
-
-    applyMoonState(current);
-  }
-  else {
-    for(int i = 0; i < 6; i++) {
-      if(i == stateIndicator - 1) {
+    if(stateIndicator == 0) {
+      for(int i = 0; i < 6; i++) {
         analogWrite(statePins[i], 255);
       }
-      else {
-        analogWrite(statePins[i], 0);
+    }
+    else {
+      for(int i = 0; i < 6; i++) {
+        if(i == stateIndicator - 1) {
+          analogWrite(statePins[i], 255);
+        }
+        else {
+          analogWrite(statePins[i], 0);
+        }
       }
     }
-  }
 
-  if(digitalRead(buttonPin) == HIGH) {
-    delay(1000);
+    delay(250);
   }
 }
 
+void runBrightnessState() {
+  if(millis() - stateTimer > 3000) {
+    currentState = NORMAL;
+    for(int i = 0; i < 6; i++) {
+      analogWrite(statePins[i], 0);
+    }
+    delay(200);
+    for(int i = 0; i < 6; i++) {
+      analogWrite(statePins[i], 255);
+    }
+    delay(200);
+    return;
+  }
+
+  bool pressed = false;
+  if(digitalRead(buttonPin) == HIGH) {
+    stateTimer = millis();
+    brightnessMultiplier += .2;
+    if(brightnessMultiplier > 1) {
+      brightnessMultiplier = 0;
+    }
+    pressed = true;
+  }
+  
+  for(int i = 0; i < 6; i++) {
+    analogWrite(statePins[i], 255 * brightnessMultiplier);
+  }
+
+  if(pressed) {
+    delay(250);
+  }
+}
+
+void runPeriodState() {
+  if(millis() - stateTimer > 2000) {
+    currentState = NORMAL;
+    for(int i = 0; i < 6; i++) {
+      analogWrite(statePins[i], 0);
+    }
+    delay(200);
+    for(int i = 0; i < 6; i++) {
+      analogWrite(statePins[i], 255);
+    }
+    delay(200);
+    return;
+  }
+
+  bool pressed = false;
+  if(digitalRead(buttonPin) == HIGH) {
+    stateTimer = millis();
+    currentPeriod = (currentPeriod + 1) % 6;
+    pressed = true;
+  }
+  
+  for(int i = 0; i < 6; i++) {
+    if(i == currentPeriod) {
+      analogWrite(statePins[i], 255);
+    }
+    else {
+      analogWrite(statePins[i], 0);
+    }
+  }
+
+  if(pressed) {
+    delay(250);
+  }
+}
+
+void runOffsetState() {
+  if(millis() - stateTimer > 2000) {
+    currentState = NORMAL;
+    for(int i = 0; i < 6; i++) {
+      analogWrite(statePins[i], 0);
+    }
+    delay(200);
+    for(int i = 0; i < 6; i++) {
+      analogWrite(statePins[i], 255);
+    }
+    delay(200);
+    return;
+  }
+  
+  for(int i = 0; i < 6; i++) {
+    analogWrite(statePins[i], 255);
+  }
+
+  if(digitalRead(buttonPin) == HIGH) {
+    stateTimer = millis();
+    offset = (offset + 1) % 30;
+    for(int i = 0; i < 6; i++) {
+      analogWrite(statePins[i], 0);
+    }
+    delay(200);
+    for(int i = 0; i < 6; i++) {
+      analogWrite(statePins[i], 255);
+    }
+    delay(300);
+  }
+  
+}
+
 void loop() {
-  if(currentState == MODE) {
-    runModeState();
+  switch(currentState) {
+    case NORMAL:
+      runNormalState();
+      break;
+    case MODE:
+      runModeState();
+      break;
+    case BRIGHTNESS:
+      runBrightnessState();
+      break;
+    case PERIOD:
+      runPeriodState();
+      break;
+    case OFFSET:
+      runOffsetState();
+      break;
   }
 }
