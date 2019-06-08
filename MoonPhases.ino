@@ -68,7 +68,7 @@ void runNormalState() {
 
   //(Time elapsed in period + adding halfway through the state + the offset based on button input) / the period of the state
   //The halfway through state is so the starting point is right at the full moon to make a good reference point
-  double current = ((millis() - currentTime) + (periods[currentPeriod] / 24.) + (offsets[currentPeriod] * offset)) / periods[currentPeriod];
+  double current = ((millis() - currentTime) + (offsets[currentPeriod] * offset)) / double(periods[currentPeriod]);
   while(current > 1) {
     current--;
   }
@@ -77,7 +77,11 @@ void runNormalState() {
 }
 
 void runModeState() {
-  if(millis() - stateTimer > 2000) {
+  if(millis() - stateTimer > 3000) {
+    for(int i = 0; i < 6; i++) {
+      analogWrite(statePins[i], 0);
+    }
+    delay(200);
     switch(stateIndicator) {
       case 0:
         currentState = NORMAL;
@@ -125,11 +129,12 @@ void runBrightnessState() {
   if(millis() - stateTimer > 3000) {
     currentState = NORMAL;
     for(int i = 0; i < 6; i++) {
-      analogWrite(statePins[i], 0);
-    }
-    delay(200);
-    for(int i = 0; i < 6; i++) {
-      analogWrite(statePins[i], 255);
+      if(brightnessMultiplier < .1) {
+        analogWrite(statePins[i], 255);
+      }
+      else {
+        analogWrite(statePins[i], 0);
+      }
     }
     delay(200);
     return;
@@ -155,14 +160,10 @@ void runBrightnessState() {
 }
 
 void runPeriodState() {
-  if(millis() - stateTimer > 2000) {
+  if(millis() - stateTimer > 3000) {
     currentState = NORMAL;
     for(int i = 0; i < 6; i++) {
       analogWrite(statePins[i], 0);
-    }
-    delay(200);
-    for(int i = 0; i < 6; i++) {
-      analogWrite(statePins[i], 255);
     }
     delay(200);
     return;
@@ -190,14 +191,10 @@ void runPeriodState() {
 }
 
 void runOffsetState() {
-  if(millis() - stateTimer > 2000) {
+  if(millis() - stateTimer > 3000) {
     currentState = NORMAL;
     for(int i = 0; i < 6; i++) {
       analogWrite(statePins[i], 0);
-    }
-    delay(200);
-    for(int i = 0; i < 6; i++) {
-      analogWrite(statePins[i], 255);
     }
     delay(200);
     return;
@@ -217,7 +214,7 @@ void runOffsetState() {
     for(int i = 0; i < 6; i++) {
       analogWrite(statePins[i], 255);
     }
-    delay(300);
+    delay(800);
   }
   
 }
