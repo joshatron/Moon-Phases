@@ -1,23 +1,10 @@
-//Time for the full moon period: 29 days, 12 hours, 44 minutes, 3 seconds
-//Lengths of a period
-unsigned long periods[6] = {12000, 720000, 3600000, 86400000, 604800000, 2551443000};
-//Length of an offset
-unsigned long offsets[6] = {1000, 60000, 300000, 7200000, 50400000, 86400000};
-//Number of offsets
-int offset = 0;
-//Which speed to do
-int currentPeriod = 5;
-
-unsigned long currentTime = 0;
-
 //Pins for lights from left to right
 int statePins[6] = {9,3,10,5,6,11};
-//Pin for button
 //Button is configured as a pull down, so read HIGH for pressed
 int buttonPin = 8;
 
-//Brightness control, from 0 to 1
-double brightnessMultiplier = 1;
+
+unsigned long currentTime;
 //Brightnesses at each stage from left to right lights
 int transitionBrightnesses[6][12] = {
  {255,255,255,255,255,255,0,0,0,0,0,0},
@@ -29,30 +16,40 @@ int transitionBrightnesses[6][12] = {
 };
 
 enum ButtonState {NORMAL, MODE, BRIGHTNESS, PERIOD, OFFSET};
-ButtonState currentState = NORMAL;
-int stateIndicator = 0;
-unsigned long stateTimer = 0;
+ButtonState currentState;
+int stateIndicator;
+unsigned long stateTimer;
+
+//The brightness is from 0 to 1
+double brightnessMultiplier;
+
+//Periods are 12 seconds, 12 minutes, 1 hour, 1 day, 1 week, and 1 full moon period
+//Time for the full moon period: 29 days, 12 hours, 44 minutes, 3 seconds
+unsigned long periods[6] = {12000, 720000, 3600000, 86400000, 604800000, 2551443000};
+int currentPeriod;
+
+//Offsets are 1 second, 1 minute, 5 minutes, 2 hours, 14 hours, and 1 day
+unsigned long offsets[6] = {1000, 60000, 300000, 7200000, 50400000, 86400000};
+int offset;
 
 void setup() {
   for(int i = 0; i < 6; i++) {
     pinMode(statePins[i], OUTPUT);
   }
   pinMode(buttonPin, INPUT);
+
+  currentState = NORMAL;
+  brightnessMultiplier = 1;
+  currentPeriod = 5;
+  offset = 0;
+  currentTime = millis();
 }
 
-void applyMoonState(double percentThrough) {
-  int before = int(percentThrough * 12);
-  int after = before + 1;
-  double transition = percentThrough * 12 - before;
-  before = before % 12;
-  after = after % 12;
-  for(int i = 0; i < 6; i++) {
-    int brightness = transitionBrightnesses[i][before] * (1 - transition) + transitionBrightnesses[i][after] * transition;
-    brightness = brightness * brightnessMultiplier;
-    analogWrite(statePins[i], brightness);
-  }
-}
-
+/*
+ * Run NORMAL state
+ * If the button is pressed, go to MODE state
+ * otherwise display the current moon phase
+ */
 void runNormalState() {
   if(digitalRead(buttonPin) == HIGH) {
     currentState = MODE;
@@ -66,16 +63,30 @@ void runNormalState() {
     currentTime = millis();
   }
 
-  //(Time elapsed in period + adding halfway through the state + the offset based on button input) / the period of the state
-  //The halfway through state is so the starting point is right at the full moon to make a good reference point
+  //Time 0 is the full moon
   double current = ((millis() - currentTime) + (offsets[currentPeriod] * offset)) / double(periods[currentPeriod]);
+  //Should only happen because of offsets
   while(current > 1) {
     current--;
   }
 
-  applyMoonState(current);
+  int before = int(current * 12);
+  int after = before + 1;
+  double transition = current * 12 - before;
+  before = before % 12;
+  after = after % 12;
+  for(int i = 0; i < 6; i++) {
+    int brightness = transitionBrightnesses[i][before] * (1 - transition) + transitionBrightnesses[i][after] * transition;
+    brightness = brightness * brightnessMultiplier;
+    analogWrite(statePins[i], brightness);
+  }
 }
 
+/*
+ * Run MODE state
+ * Every button press, change choice and display
+ * If it's been 3 seconds since a press, go to that state
+ */
 void runModeState() {
   if(millis() - stateTimer > 3000) {
     for(int i = 0; i < 6; i++) {
@@ -125,6 +136,11 @@ void runModeState() {
   }
 }
 
+/*
+ * Run BRIGHTNESS state
+ * Every button press, change choice and display
+ * If it's been 3 seconds since a press, go to back to normal state
+ */
 void runBrightnessState() {
   if(millis() - stateTimer > 3000) {
     currentState = NORMAL;
@@ -159,6 +175,11 @@ void runBrightnessState() {
   }
 }
 
+/*
+ * Run PERIOD state
+ * Every button press, change choice and display
+ * If it's been 3 seconds since a press, go to back to normal state
+ */
 void runPeriodState() {
   if(millis() - stateTimer > 3000) {
     currentState = NORMAL;
@@ -190,6 +211,11 @@ void runPeriodState() {
   }
 }
 
+/*
+ * Run OFFSET state
+ * Every button press, add to offset and flash
+ * If it's been 3 seconds since a press, go to back to normal state
+ */
 void runOffsetState() {
   if(millis() - stateTimer > 3000) {
     currentState = NORMAL;
@@ -219,6 +245,9 @@ void runOffsetState() {
   
 }
 
+/*
+ * Determine which state it is in and run corresponding function
+ */
 void loop() {
   switch(currentState) {
     case NORMAL:
