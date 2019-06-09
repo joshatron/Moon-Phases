@@ -4,6 +4,7 @@ int statePins[6] = {9,3,10,5,6,11};
 int buttonPin = 8;
 
 
+unsigned long currentTimeFull;
 unsigned long currentTime;
 //Brightnesses at each stage from left to right lights
 int transitionBrightnesses[6][12] = {
@@ -23,14 +24,15 @@ unsigned long stateTimer;
 //The brightness is from 0 to 1
 double brightnessMultiplier;
 
-//Periods are 12 seconds, 12 minutes, 1 hour, 1 day, 1 week, and 1 full moon period
+//Periods are 12 seconds, 12 minutes, 1 hour, 1 day, 12 days, and 1 full moon period
 //Time for the full moon period: 29 days, 12 hours, 44 minutes, 3 seconds
-unsigned long periods[6] = {12000, 720000, 3600000, 86400000, 604800000, 2551443000};
+unsigned long periods[6] = {12000, 720000, 3600000, 86400000, 1036800000, 2551443000};
 int currentPeriod;
 
 //Offsets are 1 second, 1 minute, 5 minutes, 2 hours, 14 hours, and 1 day
 unsigned long offsets[6] = {1000, 60000, 300000, 7200000, 50400000, 86400000};
 int offset;
+int offsetFull;
 
 void setup() {
   for(int i = 0; i < 6; i++) {
@@ -57,17 +59,31 @@ void runNormalState() {
     stateTimer = millis();
     return;
   }
-  
+
   //Using millis() - currentTime makes it work even with the overflow that millis makes
   if(millis() - currentTime > periods[currentPeriod]) {
     currentTime = millis();
   }
+  //Keep track of the full moon cycle time separately
+  if(millis() - currentTimeFull > periods[5]) {
+    currentTimeFull = millis();
+  }
 
-  //Time 0 is the full moon
-  double current = ((millis() - currentTime) + (offsets[currentPeriod] * offset)) / double(periods[currentPeriod]);
-  //Should only happen because of offsets
-  while(current > 1) {
-    current--;
+  double current = 0;
+  if(currentPeriod == 5) {
+    //Time 0 is the full moon
+    current = ((millis() - currentTimeFull) + (offsets[5] * offsetFull)) / double(periods[5]);
+    while(current > 1) {
+      current--;
+    }
+  }
+  else {
+    //Time 0 is the full moon
+    current = ((millis() - currentTime) + (offsets[currentPeriod] * offset)) / double(periods[currentPeriod]);
+    //Should only happen because of offsets
+    while(current > 1) {
+      current--;
+    }
   }
 
   int before = int(current * 12);
@@ -232,7 +248,12 @@ void runOffsetState() {
 
   if(digitalRead(buttonPin) == HIGH) {
     stateTimer = millis();
-    offset = (offset + 1) % 30;
+    if(currentPeriod == 5) {
+      offsetFull = (offsetFull + 1) % 30;
+    }
+    else {
+      offset = (offset + 1) % 12;
+    }
     for(int i = 0; i < 6; i++) {
       analogWrite(statePins[i], 0);
     }
