@@ -16,10 +16,13 @@ int transitionBrightnesses[6][12] = {
  {255,0,0,0,0,0,0,255,255,255,255,255}
 };
 
-enum ButtonState {NORMAL, MODE, BRIGHTNESS, PERIOD, OFFSET};
+enum ButtonState {NORMAL, MODE, BRIGHTNESS, PERIOD, OFFSET, DIRECTION};
 ButtonState currentState;
+bool buttonPressed;
+unsigned long buttonTimer;
+
 int stateIndicator;
-unsigned long stateTimer;
+unsigned long lastChanged;
 
 //The brightness is from 0 to 1
 double brightnessMultiplier;
@@ -29,10 +32,12 @@ double brightnessMultiplier;
 unsigned long periods[6] = {12000, 720000, 3600000, 86400000, 1036800000, 2551443000};
 int currentPeriod;
 
-//Offsets are 1 second, 1 minute, 5 minutes, 2 hours, 14 hours, and 1 day
-unsigned long offsets[6] = {1000, 60000, 300000, 7200000, 50400000, 86400000};
+//Offsets are 1 second, 1 minute, 5 minutes, 2 hours, 1 day, and 1 day
+unsigned long offsets[6] = {1000, 60000, 300000, 7200000, 86400000, 86400000};
 int offset;
 int offsetFull;
+
+bool backward = false;
 
 void setup() {
   for(int i = 0; i < 6; i++) {
@@ -53,13 +58,6 @@ void setup() {
  * otherwise display the current moon phase
  */
 void runNormalState() {
-  if(digitalRead(buttonPin) == HIGH) {
-    currentState = MODE;
-    stateIndicator = 0;
-    stateTimer = millis();
-    return;
-  }
-
   //Using millis() - currentTime makes it work even with the overflow that millis makes
   if(millis() - currentTime > periods[currentPeriod]) {
     currentTime = millis();
@@ -73,17 +71,16 @@ void runNormalState() {
   if(currentPeriod == 5) {
     //Time 0 is the full moon
     current = ((millis() - currentTimeFull) + (offsets[5] * offsetFull)) / double(periods[5]);
-    while(current > 1) {
-      current--;
-    }
   }
   else {
     //Time 0 is the full moon
     current = ((millis() - currentTime) + (offsets[currentPeriod] * offset)) / double(periods[currentPeriod]);
-    //Should only happen because of offsets
-    while(current > 1) {
-      current--;
-    }
+  }
+  while(current > 1) {
+    current--;
+  }
+  if(backward) {
+    current = 1 - current;
   }
 
   int before = int(current * 12);
@@ -100,117 +97,51 @@ void runNormalState() {
 
 /*
  * Run MODE state
- * Every button press, change choice and display
- * If it's been 3 seconds since a press, go to that state
  */
-void runModeState() {
-  if(millis() - stateTimer > 3000) {
+void runModeState(bool next) {
+  if(next) {
+    stateIndicator = (stateIndicator + 1) % 5;
+  }
+
+  if(stateIndicator == 0) {
     for(int i = 0; i < 6; i++) {
-      analogWrite(statePins[i], 0);
-    }
-    delay(200);
-    switch(stateIndicator) {
-      case 0:
-        currentState = NORMAL;
-        return;
-      case 1:
-        currentState = BRIGHTNESS;
-        stateTimer = millis();
-        return;
-      case 2:
-        currentState = SPEED;
-        stateTimer = millis();
-        return;
-      case 3:
-        currentState = OFFSET;
-        stateTimer = millis();
-        return;
+      analogWrite(statePins[i], 255);
     }
   }
-  
-  if(digitalRead(buttonPin) == HIGH) {
-    stateTimer = millis();
-    stateIndicator = (stateIndicator + 1) % 4;
-
-    if(stateIndicator == 0) {
-      for(int i = 0; i < 6; i++) {
-        analogWrite(statePins[i], 255);
-      }
-    }
-    else {
-      for(int i = 0; i < 6; i++) {
-        if(i == stateIndicator - 1) {
-          analogWrite(statePins[i], 255);
-        }
-        else {
-          analogWrite(statePins[i], 0);
-        }
-      }
-    }
-
-    delay(250);
-  }
-}
-
-/*
- * Run BRIGHTNESS state
- * Every button press, change choice and display
- * If it's been 3 seconds since a press, go to back to normal state
- */
-void runBrightnessState() {
-  if(millis() - stateTimer > 3000) {
-    currentState = NORMAL;
+  else {
     for(int i = 0; i < 6; i++) {
-      if(brightnessMultiplier < .1) {
+      if(i == stateIndicator - 1) {
         analogWrite(statePins[i], 255);
       }
       else {
         analogWrite(statePins[i], 0);
       }
     }
-    delay(200);
-    return;
   }
+}
 
-  bool pressed = false;
-  if(digitalRead(buttonPin) == HIGH) {
-    stateTimer = millis();
+/*
+ * Run BRIGHTNESS state
+ */
+void runBrightnessState(bool next) {
+  if(next) {
     brightnessMultiplier += .2;
     if(brightnessMultiplier > 1) {
       brightnessMultiplier = 0;
     }
-    pressed = true;
   }
   
   for(int i = 0; i < 6; i++) {
     analogWrite(statePins[i], 255 * brightnessMultiplier);
   }
-
-  if(pressed) {
-    delay(250);
-  }
 }
 
 /*
  * Run PERIOD state
- * Every button press, change choice and display
- * If it's been 3 seconds since a press, go to back to normal state
  */
-void runPeriodState() {
-  if(millis() - stateTimer > 3000) {
-    currentState = NORMAL;
-    for(int i = 0; i < 6; i++) {
-      analogWrite(statePins[i], 0);
-    }
-    delay(200);
-    return;
-  }
-
-  bool pressed = false;
-  if(digitalRead(buttonPin) == HIGH) {
-    stateTimer = millis();
+void runPeriodState(bool next) {
+  if(next) {
     currentPeriod = (currentPeriod + 1) % 6;
-    pressed = true;
   }
   
   for(int i = 0; i < 6; i++) {
@@ -221,33 +152,13 @@ void runPeriodState() {
       analogWrite(statePins[i], 0);
     }
   }
-
-  if(pressed) {
-    delay(250);
-  }
 }
 
 /*
  * Run OFFSET state
- * Every button press, add to offset and flash
- * If it's been 3 seconds since a press, go to back to normal state
  */
-void runOffsetState() {
-  if(millis() - stateTimer > 3000) {
-    currentState = NORMAL;
-    for(int i = 0; i < 6; i++) {
-      analogWrite(statePins[i], 0);
-    }
-    delay(200);
-    return;
-  }
-  
-  for(int i = 0; i < 6; i++) {
-    analogWrite(statePins[i], 255);
-  }
-
-  if(digitalRead(buttonPin) == HIGH) {
-    stateTimer = millis();
+void runOffsetState(bool next) {
+  if(next) {
     if(currentPeriod == 5) {
       offsetFull = (offsetFull + 1) % 30;
     }
@@ -257,34 +168,114 @@ void runOffsetState() {
     for(int i = 0; i < 6; i++) {
       analogWrite(statePins[i], 0);
     }
-    delay(200);
-    for(int i = 0; i < 6; i++) {
-      analogWrite(statePins[i], 255);
-    }
-    delay(800);
+    delay(100);
   }
   
+  for(int i = 0; i < 6; i++) {
+    analogWrite(statePins[i], 255);
+  }
+}
+
+/*
+ * Run DIRECTION state
+ */
+void runDirectionState(bool next) {
+  if(next) {
+    backward = !backward;
+  }
+
+  for(int i = 0; i < 6; i++) {
+    if((backward && i < 3) || (!backward && i >= 3)) {
+      analogWrite(statePins[i], 255);
+    }
+    else {
+      analogWrite(statePins[i], 0);
+    }
+  }
 }
 
 /*
  * Determine which state it is in and run corresponding function
  */
 void loop() {
+  bool pressed = false;
+  bool switched = false;
+  if(digitalRead(buttonPin) == HIGH) {
+    pressed = true;
+    delay(20);
+  }
+  if(pressed != buttonPressed) {
+    buttonTimer = millis();
+    buttonPressed = pressed;
+    switched = true;
+  }
+
+  //Logic for switching modes
+  if(currentState != NORMAL) {
+    if(!buttonPressed && millis() - buttonTimer > 2000) {
+      if(currentState == MODE) {
+        buttonTimer = millis();
+        switch(stateIndicator) {
+          case 0:
+            currentState = NORMAL;
+            break;
+          case 1:
+            currentState = BRIGHTNESS;
+            break;
+          case 2:
+            currentState = SPEED;
+            break;
+          case 3:
+            currentState = OFFSET;
+            break;
+          case 4:
+            currentState = DIRECTION;
+            break;
+        }
+        stateIndicator = 0;
+      }
+      else {
+        currentState = NORMAL;
+      }
+      
+      for(int i = 0; i < 6; i++) {
+        analogWrite(statePins[i], 0);
+      }
+      delay(100);
+    }
+  }
+  else if(buttonPressed) {
+    currentState = MODE;
+  }
+
+  //Logic for whether next should be true
+  bool next = false;
+  if(switched && buttonPressed) {
+    next = true;
+  }
+  else if(buttonPressed && millis() - buttonTimer > 750) {
+    next = true;
+    buttonTimer = millis();
+  }
+  
   switch(currentState) {
     case NORMAL:
       runNormalState();
       break;
     case MODE:
-      runModeState();
+      runModeState(next);
       break;
     case BRIGHTNESS:
-      runBrightnessState();
+      runBrightnessState(next);
       break;
     case PERIOD:
-      runPeriodState();
+      runPeriodState(next);
       break;
     case OFFSET:
-      runOffsetState();
+      runOffsetState(next);
+      break;
+    case DIRECTION:
+      runDirectionState(next);
       break;
   }
 }
