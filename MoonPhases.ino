@@ -101,6 +101,85 @@ void runNormalState() {
 void runModeState(bool next) {
   if(next) {
     stateIndicator = (stateIndicator + 1) % 5;
+    switch(stateIndicator) {
+      //brightness
+      case 1:
+      for(int i = 0; i < 6; i++) {
+        analogWrite(statePins[i], 125);
+      }
+      delay(200);
+      for(int i = 0; i < 6; i++) {
+        analogWrite(statePins[i], 255);
+      }
+      delay(200);
+      break;
+      //speed
+      case 2:
+      for(int i = 0; i < 6; i++) {
+        if(i == 0 || i == 1) {
+          analogWrite(statePins[i], 255);
+        }
+        else {
+          analogWrite(statePins[i], 0);
+        }
+      }
+      delay(200);
+      for(int i = 0; i < 6; i++) {
+        if(i == 2 || i == 3) {
+          analogWrite(statePins[i], 255);
+        }
+        else {
+          analogWrite(statePins[i], 0);
+        }
+      }
+      delay(100);
+      for(int i = 0; i < 6; i++) {
+        if(i == 4 || i == 5) {
+          analogWrite(statePins[i], 255);
+        }
+        else {
+          analogWrite(statePins[i], 0);
+        }
+      }
+      delay(100);
+      break;
+      //offset
+      case 3:
+      for(int i = 0; i < 6; i++) {
+        analogWrite(statePins[i], 255);
+      }
+      delay(200);
+      for(int i = 0; i < 6; i++) {
+        analogWrite(statePins[i], 0);
+      }
+      delay(100);
+      for(int i = 0; i < 6; i++) {
+        analogWrite(statePins[i], 255);
+      }
+      delay(100);
+      break;
+      //direction
+      case 4:
+      for(int i = 0; i < 6; i++) {
+        if(i == 3 || i == 4 || i == 5) {
+          analogWrite(statePins[i], 255);
+        }
+        else {
+          analogWrite(statePins[i], 0);
+        }
+      }
+      delay(200);
+      for(int i = 0; i < 6; i++) {
+        if(i == 0 || i == 1 || i == 2) {
+          analogWrite(statePins[i], 255);
+        }
+        else {
+          analogWrite(statePins[i], 0);
+        }
+      }
+      delay(200);
+      break;
+    }
   }
 
   if(stateIndicator == 0) {
