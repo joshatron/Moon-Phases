@@ -51,6 +51,7 @@ Below, I've documented the steps I went through in order to convert the Moon In 
  * 1 protoboard
  * 1 push button
  * 1 10kOhm resistor
+ * 1 piece of chip board
 
 #### Tools
 
@@ -58,3 +59,34 @@ Below, I've documented the steps I went through in order to convert the Moon In 
  * Soldering iron
  * Dremel with cutting wheel
  * Wire stripper/cutter
+
+#### Procedure
+
+The first step is deconstructing the moon.
+I removed the batteries, then the front cover, then separated the front from the back panel.
+Next was to remove the unnecessary electronics.
+All I left was the circuit board attached to the LEDs and the wires coming from them.
+
+You can see the back panel here:
+
+![Devoid of all life](pictures/moon_back_panel_inside.jpg)
+
+And the remaining electronics here:
+
+![Look how nice they were making the wires different colors](pictures/moon_led_circuit.jpg)
+
+There is only a small amount of room in between the front and back panel, and most of it was taken up by the battery pack.
+I used a dremel with a cutting wheel to cut out the battery area so I had more room to work with.
+To make it a little nicer I also sanded it down after cutting it.
+
+![That cut much nicer than I expected](pictures/moon_back_panel_sanded_down.jpg)
+
+To make that space usable again, I cut out some chip board to cover where the hole was.
+You could just as easily use cardboard too, I just had the chip board on hand.
+I used super glue to keep it down, though a hot glue gun is probably a better choice.
+
+![Look at that professional lopsided square over a round hole](pictures/moon_back_panel_chip_board_glued.jpg)
+
+The battery cover happened to fit back in the hole I made quite nicely, so I glued that on so the final product looked semi professional.
+
+![It fits and it ships](pictures/moon_back_panel_battery_cover_replaced.jpg)
