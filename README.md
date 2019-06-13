@@ -90,3 +90,48 @@ I used super glue to keep it down, though a hot glue gun is probably a better ch
 The battery cover happened to fit back in the hole I made quite nicely, so I glued that on so the final product looked semi professional.
 
 ![It fits and it ships](pictures/moon_back_panel_battery_cover_replaced.jpg)
+
+Next it was time to put some electronics back in.
+I chose the arduino micro because it is so small and also because it was easy to solder to a protoboard.
+I had to trim the ICSP pins to make it fit, but I don't plan on using them and if I need to I can solder new pins on.
+
+![What a short stack](pictures/arduino_pins_cut.jpg)
+
+The next step was to hook everything up with a breadboard as a proof of concept.
+
+![Look at that beautiful and safe setup](pictures/arduino_breadboard_all_leds.jpg)
+
+With that working, it was time to solder it all up.
+From left to right, I hooked up the LEDs to pins 3, 5, 6, 9, 10, and 11.
+I chose those ones because they are PWM pins, so I could create gradient effects.
+I also hooked the button up with a pull down circuit, connected to pin 8 for input.
+
+![Doesn't look half bad](pictures/arduino_protoboard_pin_config.jpg)
+
+One final adjustment to the moon case was adding a hole for the USB cable.
+I had considered keeping it on battery power, but I need it to last for months or years a time, which it wouldn't.
+I just used the dremel again and cut a hole in the bottom.
+
+![It's a big hole, but it has to fit the end of the USB](pictures/moon_back_panel_final_interior.jpg)
+
+Rather than cut another hole for the button, I stuck it where the switch originally was and glued it down.
+
+![Not the easiest to press, but workable](pictures/moon_back_panel_button.jpg)
+
+Last, but not least, was reassembly.
+I didn't tape or glue down the protoboard so I could potentially work on it in the future.
+It also was staying pretty still with all the wires attached to it.
+Quick note, upload the program before closing the case.
+There is a chance when uploading that you need to press the reset button, which is hard to reach when you close everything up.
+Not that I know from personal experience or anything.
+
+Here's a nice view from the back.
+
+![Don't worry, I eventually put all the screws back in](pictures/moon_fully_working_back.jpg)
+
+And here's the money shot.
+
+![It's alive!](pictures/moon_fully_working_front.jpg)
+
+The rest from there is just putting it up on a wall and changing the settings to what you want.
+This was a really fun little project that is relatively low cost and not too hard to finish in a day.
