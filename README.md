@@ -8,7 +8,7 @@ How To Use
 ----------
 
 Once you have the Moon converted and plugged in, there are several settings you can adjust.
-You are able to adjust the brightness, speed, offset, and direction.
+You are able to adjust the brightness, speed, offset, direction, and smoothness.
 
 To change a setting, press the button once, then keep pressing to cycle through the different settings.
 When you first switch to an option, a short animation will play that represents what type of setting will be effected.
@@ -36,6 +36,10 @@ For all other periods, triggering an offset moves forward one panel.
 The direction controls what direction the panels light up.
 By default, it lights up right to left, like the northern hemisphere.
 With this setting you can choose to have it light up left to right also.
+
+The smoothness controls whether there are smooth transitions between states.
+By default, it makes smooth transitions.
+You can make it do an instant transition if you prefer with this setting.
 
 How It's Made
 -------------

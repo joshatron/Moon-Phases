@@ -16,7 +16,7 @@ int transitionBrightnesses[6][12] = {
  {255,0,0,0,0,0,0,255,255,255,255,255}
 };
 
-enum ButtonState {NORMAL, MODE, BRIGHTNESS, PERIOD, OFFSET, DIRECTION};
+enum ButtonState {NORMAL, MODE, BRIGHTNESS, PERIOD, OFFSET, DIRECTION, SMOOTHNESS};
 ButtonState currentState;
 bool buttonPressed;
 unsigned long buttonTimer;
@@ -38,6 +38,8 @@ int offset;
 int offsetFull;
 
 bool backward = false;
+
+bool smooth = true;
 
 void setup() {
   for(int i = 0; i < 6; i++) {
@@ -69,7 +71,6 @@ void runNormalState() {
 
   double current = 0;
   if(currentPeriod == 5) {
-    //Time 0 is the full moon
     current = ((millis() - currentTimeFull) + (offsets[5] * offsetFull)) / double(periods[5]);
   }
   else {
@@ -89,7 +90,18 @@ void runNormalState() {
   before = before % 12;
   after = after % 12;
   for(int i = 0; i < 6; i++) {
-    int brightness = transitionBrightnesses[i][before] * (1 - transition) + transitionBrightnesses[i][after] * transition;
+    int brightness = 0;
+    if(smooth) {
+      brightness = transitionBrightnesses[i][before] * (1 - transition) + transitionBrightnesses[i][after] * transition;
+    }
+    else {
+      if(transition < .5) {
+        brightness = transitionBrightnesses[i][before];
+      }
+      else {
+        brightness = transitionBrightnesses[i][after];
+      }
+    }
     brightness = brightness * brightnessMultiplier;
     analogWrite(statePins[i], brightness);
   }
@@ -100,7 +112,7 @@ void runNormalState() {
  */
 void runModeState(bool next) {
   if(next) {
-    stateIndicator = (stateIndicator + 1) % 5;
+    stateIndicator = (stateIndicator + 1) % 6;
     lastChanged = millis();
   }
 
@@ -179,6 +191,23 @@ void runModeState(bool next) {
           else {
             analogWrite(statePins[i], 0);
           }
+        }
+        break;
+
+      //smoothness
+      case 5:
+        double b;
+        if(animationTime < 500) {
+          b = animationTime / 500.;
+        }
+        else if(animationTime < 750){
+          b = 1.;
+        }
+        else {
+          b = 0.;
+        }
+        for(int i = 0; i < 6; i++) {
+          analogWrite(statePins[i], 255 * b);
         }
         break;
     }
@@ -277,6 +306,29 @@ void runDirectionState(bool next) {
 }
 
 /*
+ * Run SMOOTHNESS state
+ */
+void runSmoothnessState(bool next) {
+  if(next) {
+    smooth = !smooth;
+  }
+
+  for(int i = 0; i < 6; i++) {
+    if(i == 0 || i == 2 || i == 4) {
+      analogWrite(statePins[i], 255);
+    }
+    else {
+      if(smooth) {
+        analogWrite(statePins[i], 75);
+      }
+      else {
+        analogWrite(statePins[i], 0);
+      }
+    }
+  }
+}
+
+/*
  * Determine which state it is in and run corresponding function
  */
 void loop() {
@@ -312,6 +364,9 @@ void loop() {
             break;
           case 4:
             currentState = DIRECTION;
+            break;
+          case 5:
+            currentState = SMOOTHNESS;
             break;
         }
         stateIndicator = 0;
@@ -358,6 +413,9 @@ void loop() {
       break;
     case DIRECTION:
       runDirectionState(next);
+      break;
+    case SMOOTHNESS:
+      runSmoothnessState(next);
       break;
   }
 }
