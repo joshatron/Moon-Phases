@@ -201,10 +201,10 @@ void runModeState(bool next) {
           b = animationTime / 500.;
         }
         else if(animationTime < 750){
-          b = 1.;
+          b = 0.;
         }
         else {
-          b = 0.;
+          b = 1.;
         }
         for(int i = 0; i < 6; i++) {
           analogWrite(statePins[i], 255 * b);
