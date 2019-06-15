@@ -62,11 +62,11 @@ void setup() {
 void runNormalState() {
   //Using millis() - currentTime makes it work even with the overflow that millis makes
   if(millis() - currentTime > periods[currentPeriod]) {
-    currentTime -= periods[currentPeriod];
+    currentTime += periods[currentPeriod];
   }
   //Keep track of the full moon cycle time separately
   if(millis() - currentTimeFull > periods[5]) {
-    currentTimeFull -= periods[5];
+    currentTimeFull += periods[5];
   }
 
   double current = 0;
