@@ -1,0 +1,15 @@
+#!/usr/bin/python3
+import time
+
+initialFullMoon = 1601586300
+secondsBetweenFullMoons = 2551443
+
+currentTime = int(time.time())
+lastFullMoon = initialFullMoon
+while lastFullMoon + secondsBetweenFullMoons < currentTime:
+    lastFullMoon += secondsBetweenFullMoons
+
+secondsSinceLastFullMoon = currentTime - lastFullMoon
+daysSinceLastFullMoon = round(secondsSinceLastFullMoon / 60 / 60 / 24)
+
+print("It has been ", daysSinceLastFullMoon," days since the last full moon.")

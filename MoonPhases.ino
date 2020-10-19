@@ -336,6 +336,7 @@ void loop() {
   bool switched = false;
   if(digitalRead(buttonPin) == HIGH) {
     pressed = true;
+    //For debouncing. If button presses are getting triggered twice sometimes, increase this number
     delay(20);
   }
   if(pressed != buttonPressed) {
